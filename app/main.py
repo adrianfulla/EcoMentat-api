@@ -4,7 +4,7 @@ from typing import Optional
 from app.schemas import AtmosData, JsonPredictRequest, PredictResponse
 from app.model_runtime import predict_from_base64, predict_from_bytes
 
-app = FastAPI(title="AerialWaste Multimodal API", version="1.0.0")
+app = FastAPI(title="Landfill Multimodal API", version="1.0.0")
 
 @app.get("/live")
 def live():

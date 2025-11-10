@@ -11,6 +11,8 @@ from typing import Tuple
 # If your project expects this name/order, lock it here:
 ATMOS_KEYS = ["NO2", "CO", "PM2.5", "PM10"]
 
+_LEGACY_UNITS = os.getenv("USE_LEGACY_UNITS", "1") == "1"
+
 _eval_tf = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -34,6 +36,13 @@ def _z_transform(x: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray
 def _image_from_bytes(b: bytes) -> Image.Image:
     img = Image.open(io.BytesIO(b)).convert("RGB")
     return img
+
+def _apply_legacy_unit_conv(vals):
+    # vals = [NO2, CO, PM2.5, PM10] en unidades crudas de entrada
+    NO2, CO, PM25, PM10 = vals
+    NO2 = NO2 * 46.0
+    CO  = (CO * 28.0) / 1000.0
+    return [NO2, CO, PM25, PM10]
 
 def _image_from_base64(s: str) -> Image.Image:
     return _image_from_bytes(base64.b64decode(s))
@@ -74,6 +83,8 @@ def predict_from_image_and_atmos(img: Image.Image, atmos_ordered: list[float]) -
     _ensure_model_loaded()
 
     x_img = _eval_tf(img).unsqueeze(0).to(_DEVICE)       # [1,3,224,224]
+    if _LEGACY_UNITS:
+        atmos_ordered = _apply_legacy_unit_conv(atmos_ordered)
     x_at = np.asarray(atmos_ordered, dtype=np.float32)   # [4]
     x_at_z = _z_transform(x_at, _ATMOS_MEAN, _ATMOS_STD)
     x_at_t = torch.from_numpy(x_at_z).unsqueeze(0).to(_DEVICE)  # [1,4]
